@@ -82,7 +82,7 @@ async function handleAutoRoute(request: NextRequest) {
       return xmlResponse("<Response><Say>No provider is available right now. Please try again later.</Say><Hangup /></Response>");
     }
 
-    return xmlResponse(`<Response><Say>Connecting your call.</Say>${dialXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
+    return xmlResponse(`<Response>${dialXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
   }
 
   return NextResponse.json({
