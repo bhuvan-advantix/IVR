@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Atithiseva IVR
 
-## Getting Started
+Week 1 implementation for the Atithiseva IVR pilot.
 
-First, run the development server:
+## Stack
 
-```bash
+- Next.js App Router
+- Node.js API routes
+- Turso/libSQL database
+- Turso-backed admin login
+- Exotel outbound call API and status webhook
+- Vercel-ready environment configuration
+
+## Local Setup
+
+```powershell
+cd C:\Users\advantix-user-002\Desktop\IVR\atithiseva-ivr
+npm install
+npm run db:init
+npm run admin:create
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The local admin email and password are read from `.env.local`.
 
-## Learn More
+## Required Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+```env
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
+EXOTEL_API_KEY=
+EXOTEL_API_TOKEN=
+EXOTEL_ACCOUNT_SID=
+EXOTEL_SUBDOMAIN=
+EXOTEL_CALLER_ID=
+EXOTEL_DEFAULT_FLOW_URL=
+APP_BASE_URL=
+SETUP_SECRET=
+SESSION_SECRET=
+SESSION_COOKIE_NAME=
+DEFAULT_CAMPAIGN_NAME=
+DEFAULT_CAMPAIGN_DESCRIPTION=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`EXOTEL_CALLER_ID` must be set to the approved Exotel virtual number before real calls can be placed.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Verification Commands
 
-## Deploy on Vercel
+```powershell
+npm run lint
+npm run build
+curl.exe http://localhost:3000/api/health
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Week 1 Routes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/login` - admin sign in
+- `/` - protected pilot dashboard
+- `/api/health` - Turso health check
+- `/api/calls` - protected Exotel call queue endpoint
+- `/api/otp-routes` - protected OTP route preparation endpoint
+- `/api/ivr/otp-lookup` - public OTP lookup endpoint for IVR routing
+- `/api/exotel/status` - public Exotel status callback endpoint
+- `/api/setup` - setup endpoint protected by `SETUP_SECRET`
+
+## Phase 1 Usage
+
+1. Sign in to the dashboard.
+2. Confirm Phase 1 readiness checks.
+3. Add OTP routes in the Prepare OTP mapping form.
+4. Configure the Exotel app to call `/api/ivr/otp-lookup` when it has collected the OTP.
+5. Configure Exotel status callbacks to `/api/exotel/status`.
+
+For real Exotel inbound/callback testing, `APP_BASE_URL` must be the deployed HTTPS URL, not localhost.
