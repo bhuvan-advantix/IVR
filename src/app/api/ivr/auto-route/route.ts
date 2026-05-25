@@ -76,6 +76,19 @@ function textResponse(body: string, status = 200) {
   });
 }
 
+function connectResponse(number: string) {
+  return NextResponse.json({
+    fetch_after_attempt: false,
+    destination: {
+      numbers: [number],
+    },
+    record: true,
+    recording_channels: "dual",
+    max_ringing_duration: 45,
+    max_conversation_duration: 3600,
+  });
+}
+
 async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
@@ -112,7 +125,8 @@ async function handleAutoRoute(request: NextRequest) {
       return textResponse("No active provider available.", 404);
     }
 
-    return textResponse(normalizeIndianPhoneForE164(provider.phone));
+    const number = normalizeIndianPhoneForE164(provider.phone);
+    return wantsConnect ? connectResponse(number) : textResponse(number);
   }
 
   return NextResponse.json({

@@ -49,6 +49,19 @@ function textResponse(body: string, status = 200) {
   });
 }
 
+function connectResponse(number: string) {
+  return NextResponse.json({
+    fetch_after_attempt: false,
+    destination: {
+      numbers: [number],
+    },
+    record: true,
+    recording_channels: "dual",
+    max_ringing_duration: 45,
+    max_conversation_duration: 3600,
+  });
+}
+
 async function parseRequest(request: NextRequest) {
   if (request.method === "GET") {
     return normalizePayload(request.nextUrl.searchParams.entries());
@@ -97,7 +110,8 @@ async function handleLookup(request: NextRequest) {
       return textResponse("OTP route not found.", 404);
     }
 
-    return textResponse(normalizeIndianPhoneForE164(route.providerPhone));
+    const number = normalizeIndianPhoneForE164(route.providerPhone);
+    return wantsConnect ? connectResponse(number) : textResponse(number);
   }
 
   return NextResponse.json({
