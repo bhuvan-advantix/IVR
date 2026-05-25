@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerEnv } from "@/lib/env";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 import { selectProvider } from "@/lib/providers";
 import { initDatabase } from "@/lib/schema";
@@ -77,21 +76,6 @@ function textResponse(body: string, status = 200) {
   });
 }
 
-function connectResponse(number: string) {
-  const env = getServerEnv();
-
-  return NextResponse.json({
-    fetch_after_attempt: false,
-    destination: {
-      numbers: [number],
-    },
-    record: env.EXOTEL_CALL_RECORDING_ENABLED,
-    recording_channels: "dual",
-    max_ringing_duration: 30,
-    max_conversation_duration: 3600,
-  });
-}
-
 async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
@@ -128,8 +112,7 @@ async function handleAutoRoute(request: NextRequest) {
       return textResponse("No active provider available.", 404);
     }
 
-    const number = normalizeIndianPhoneForE164(provider.phone);
-    return wantsConnect ? connectResponse(number) : textResponse(number);
+    return textResponse(normalizeIndianPhoneForE164(provider.phone));
   }
 
   return NextResponse.json({

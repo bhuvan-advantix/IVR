@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerEnv } from "@/lib/env";
 import { lookupOtpRoute, recordOtpLookup } from "@/lib/otp-routes";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 
@@ -47,21 +46,6 @@ function textResponse(body: string, status = 200) {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
     },
-  });
-}
-
-function connectResponse(number: string) {
-  const env = getServerEnv();
-
-  return NextResponse.json({
-    fetch_after_attempt: false,
-    destination: {
-      numbers: [number],
-    },
-    record: env.EXOTEL_CALL_RECORDING_ENABLED,
-    recording_channels: "dual",
-    max_ringing_duration: 30,
-    max_conversation_duration: 3600,
   });
 }
 
@@ -113,8 +97,7 @@ async function handleLookup(request: NextRequest) {
       return textResponse("OTP route not found.", 404);
     }
 
-    const number = normalizeIndianPhoneForE164(route.providerPhone);
-    return wantsConnect ? connectResponse(number) : textResponse(number);
+    return textResponse(normalizeIndianPhoneForE164(route.providerPhone));
   }
 
   return NextResponse.json({
