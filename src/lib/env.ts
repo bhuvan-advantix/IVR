@@ -17,6 +17,9 @@ const envSchema = z.object({
     .default("true")
     .transform((value) => value === "true"),
   OTP_LENGTH: z.coerce.number().int().min(4).max(8).default(4),
+  DEFAULT_LOCATION_NAME: z.string().optional().default(""),
+  DEFAULT_PROVIDER_NAME: z.string().optional().default(""),
+  DEFAULT_PROVIDER_PHONE: z.string().optional().default(""),
   APP_BASE_URL: z.string().min(1).default("http://localhost:3000"),
   SETUP_SECRET: z.string().min(1).default("change-me"),
   SESSION_SECRET: z.string().min(16).default("change-me-change-me"),

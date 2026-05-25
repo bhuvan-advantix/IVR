@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { KeyRound, Save } from "lucide-react";
+import { KeyRound, Shuffle } from "lucide-react";
+import type { Provider } from "@/lib/providers";
 
 type SubmitState =
   | { status: "idle" }
@@ -10,7 +11,13 @@ type SubmitState =
   | { status: "success"; message: string }
   | { status: "error"; message: string };
 
-export function OtpRouteForm({ otpLength }: { otpLength: number }) {
+export function OtpRouteForm({
+  otpLength,
+  providers,
+}: {
+  otpLength: number;
+  providers: Provider[];
+}) {
   const router = useRouter();
   const [state, setState] = useState<SubmitState>({ status: "idle" });
 
@@ -23,12 +30,10 @@ export function OtpRouteForm({ otpLength }: { otpLength: number }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        otp: formData.get("otp"),
         customerName: formData.get("customerName"),
         customerPhone: formData.get("customerPhone"),
         locationName: formData.get("locationName"),
-        providerName: formData.get("providerName"),
-        providerPhone: formData.get("providerPhone"),
+        providerId: formData.get("providerId") || undefined,
         status: formData.get("status"),
         notes: formData.get("notes"),
       }),
@@ -41,27 +46,17 @@ export function OtpRouteForm({ otpLength }: { otpLength: number }) {
       return;
     }
 
-    setState({ status: "success", message: "OTP route saved." });
+    setState({
+      status: "success",
+      message: `Automatic OTP generated: ${result.route?.otp ?? "saved"}`,
+    });
     router.refresh();
   }
 
   return (
     <form action={submitRoute} className="grid gap-4">
-      <div className="grid gap-2">
-        <label className="text-sm font-medium text-slate-700" htmlFor="otp">
-          Booking OTP
-        </label>
-        <input
-          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          id="otp"
-          inputMode="numeric"
-          maxLength={otpLength}
-          minLength={otpLength}
-          name="otp"
-          pattern={`\\d{${otpLength}}`}
-          placeholder={"0".repeat(otpLength)}
-          required
-        />
+      <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+        The system generates a unique {otpLength}-digit OTP automatically.
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -100,30 +95,24 @@ export function OtpRouteForm({ otpLength }: { otpLength: number }) {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-700" htmlFor="providerName">
-            Provider
-          </label>
-          <input
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            id="providerName"
-            name="providerName"
-            required
-          />
-        </div>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-700" htmlFor="providerPhone">
-            Provider phone
-          </label>
-          <input
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            id="providerPhone"
-            name="providerPhone"
-            placeholder="+91..."
-            required
-          />
-        </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-slate-700" htmlFor="providerId">
+          Provider assignment
+        </label>
+        <select
+          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          id="providerId"
+          name="providerId"
+        >
+          <option value="">Auto-select active provider</option>
+          {providers
+            .filter((provider) => provider.status === "active")
+            .map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name} - {provider.locationName}
+              </option>
+            ))}
+        </select>
       </div>
 
       <div className="grid gap-2">
@@ -157,8 +146,8 @@ export function OtpRouteForm({ otpLength }: { otpLength: number }) {
         disabled={state.status === "loading"}
         type="submit"
       >
-        {state.status === "loading" ? <KeyRound className="size-4 animate-pulse" /> : <Save className="size-4" />}
-        Save OTP route
+        {state.status === "loading" ? <KeyRound className="size-4 animate-pulse" /> : <Shuffle className="size-4" />}
+        Generate route
       </button>
 
       {state.status === "success" ? (

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CheckCircle2, Circle, Database, KeyRound, PhoneCall, Users } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Circle, Database, KeyRound, PhoneCall, Shuffle, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { CallForm } from "@/components/call-form";
 import { OtpRouteForm } from "@/components/otp-route-form";
@@ -6,6 +6,7 @@ import { getCurrentAdmin } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
 import { getServerEnv } from "@/lib/env";
 import { listOtpRoutes } from "@/lib/otp-routes";
+import { listProviders } from "@/lib/providers";
 import { getPhaseReadiness } from "@/lib/readiness";
 
 export const dynamic = "force-dynamic";
@@ -49,21 +50,24 @@ export default async function Home() {
   }
 
   const env = getServerEnv();
-  const [data, readiness, otpRoutes] = await Promise.all([
+  const [data, readiness, otpRoutes, providers] = await Promise.all([
     getDashboardData(),
     getPhaseReadiness(),
     listOtpRoutes(6),
+    listProviders(),
   ]);
   const callbackUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/exotel/status`;
   const otpLookupUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/ivr/otp-lookup`;
+  const autoRouteUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/ivr/auto-route?format=xml`;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <header className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Atithiseva IVR</p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-950 sm:text-3xl">Pilot command center</h1>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-950 sm:text-3xl">Phase 1 demo command center</h1>
             <p className="mt-1 text-sm text-slate-600">{admin.email}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -76,6 +80,11 @@ export default async function Home() {
                 Sign out
               </button>
             </form>
+          </div>
+          </div>
+          <div className="mt-5 grid gap-3 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950 md:grid-cols-2">
+            <p className="break-all">Press-1 auto route: {autoRouteUrl}</p>
+            <p className="break-all">OTP lookup route: {otpLookupUrl}?format=xml</p>
           </div>
         </header>
 
@@ -184,7 +193,7 @@ export default async function Home() {
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-slate-950">Prepare OTP mapping</h2>
             </div>
-            <OtpRouteForm otpLength={env.OTP_LENGTH} />
+            <OtpRouteForm otpLength={env.OTP_LENGTH} providers={providers} />
           </div>
 
           <div className="rounded-md border border-slate-200 bg-white shadow-sm">
@@ -237,6 +246,39 @@ export default async function Home() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
+            <Shuffle className="size-4 text-slate-600" />
+            <h2 className="text-lg font-semibold text-slate-950">Provider pool</h2>
+          </div>
+          <div className="grid gap-3 p-5 md:grid-cols-2 lg:grid-cols-3">
+            {providers.length ? (
+              providers.map((provider) => (
+                <div className="rounded-md border border-slate-200 p-4" key={provider.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-950">{provider.name}</p>
+                      <p className="text-sm text-slate-600">{provider.locationName}</p>
+                    </div>
+                    <span
+                      className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                        provider.status === "active"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {provider.status}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-600">{provider.phone}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No providers configured.</p>
+            )}
           </div>
         </section>
       </div>

@@ -48,9 +48,21 @@ const schema = [
     payload TEXT NOT NULL,
     received_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
+  `CREATE TABLE IF NOT EXISTS providers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
+    location_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    priority INTEGER NOT NULL DEFAULT 100,
+    last_assigned_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
   `CREATE TABLE IF NOT EXISTS otp_routes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     otp TEXT NOT NULL UNIQUE,
+    provider_id INTEGER,
     customer_name TEXT,
     customer_phone TEXT,
     location_name TEXT NOT NULL,
@@ -59,14 +71,22 @@ const schema = [
     status TEXT NOT NULL DEFAULT 'active',
     notes TEXT,
     expires_at TEXT,
+    generated_by TEXT NOT NULL DEFAULT 'system',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (provider_id) REFERENCES providers(id)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_calls_call_sid ON calls(call_sid)`,
   `CREATE INDEX IF NOT EXISTS idx_calls_created_at ON calls(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_call_events_call_sid ON call_events(call_sid)`,
+  `CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status)`,
   `CREATE INDEX IF NOT EXISTS idx_otp_routes_otp ON otp_routes(otp)`,
   `CREATE INDEX IF NOT EXISTS idx_otp_routes_status ON otp_routes(status)`,
+];
+
+const migrations = [
+  "ALTER TABLE otp_routes ADD COLUMN provider_id INTEGER",
+  "ALTER TABLE otp_routes ADD COLUMN generated_by TEXT NOT NULL DEFAULT 'system'",
 ];
 
 export async function initDatabase() {
@@ -77,9 +97,26 @@ export async function initDatabase() {
     await turso.execute(statement);
   }
 
+  for (const statement of migrations) {
+    await turso.execute(statement).catch(() => undefined);
+  }
+
   await turso.execute({
     sql: `INSERT OR IGNORE INTO campaigns (name, description, status)
           VALUES (?, ?, ?)`,
     args: [env.DEFAULT_CAMPAIGN_NAME, env.DEFAULT_CAMPAIGN_DESCRIPTION, "active"],
   });
+
+  if (env.DEFAULT_PROVIDER_NAME && env.DEFAULT_PROVIDER_PHONE && env.DEFAULT_LOCATION_NAME) {
+    await turso.execute({
+      sql: `INSERT INTO providers (name, phone, location_name, status)
+            VALUES (?, ?, ?, 'active')
+            ON CONFLICT(phone) DO UPDATE SET
+              name = excluded.name,
+              location_name = excluded.location_name,
+              status = 'active',
+              updated_at = datetime('now')`,
+      args: [env.DEFAULT_PROVIDER_NAME, env.DEFAULT_PROVIDER_PHONE, env.DEFAULT_LOCATION_NAME],
+    });
+  }
 }

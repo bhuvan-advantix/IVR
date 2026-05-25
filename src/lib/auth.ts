@@ -98,7 +98,7 @@ export async function setSessionCookie(admin: AdminSession) {
   cookieStore.set(env.SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: env.APP_BASE_URL.startsWith("https://"),
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 8,
   });
@@ -111,7 +111,7 @@ export async function clearSessionCookie() {
   cookieStore.set(env.SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: env.APP_BASE_URL.startsWith("https://"),
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
   });

@@ -23,7 +23,9 @@ export async function getPhaseReadiness(): Promise<PhaseReadiness> {
 
   const env = getServerEnv();
   const otpRoutes = await db().execute("SELECT COUNT(*) AS count FROM otp_routes WHERE status = 'active'");
+  const providers = await db().execute("SELECT COUNT(*) AS count FROM providers WHERE status = 'active'");
   const activeOtpCount = Number(otpRoutes.rows[0]?.count ?? 0);
+  const activeProviderCount = Number(providers.rows[0]?.count ?? 0);
 
   const items: ReadinessItem[] = [
     {
@@ -52,9 +54,14 @@ export async function getPhaseReadiness(): Promise<PhaseReadiness> {
       detail: env.EXOTEL_CALL_RECORDING_ENABLED ? "Expected on" : "Enable recording in Exotel",
     },
     {
-      label: "OTP mapping logic",
+      label: "Provider pool",
+      done: activeProviderCount > 0,
+      detail: activeProviderCount > 0 ? `${activeProviderCount} active provider(s)` : "Add at least one active provider",
+    },
+    {
+      label: "Automatic OTP logic",
       done: activeOtpCount > 0,
-      detail: activeOtpCount > 0 ? `${activeOtpCount} active OTP route(s)` : "Create at least one active OTP route",
+      detail: activeOtpCount > 0 ? `${activeOtpCount} generated OTP route(s)` : "Generate one automatic OTP route",
     },
     {
       label: "Public callback URL",

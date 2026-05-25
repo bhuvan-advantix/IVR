@@ -68,6 +68,7 @@ curl.exe http://localhost:3000/api/health
 - `/api/calls` - protected Exotel call queue endpoint
 - `/api/otp-routes` - protected OTP route preparation endpoint
 - `/api/ivr/otp-lookup` - public OTP lookup endpoint for IVR routing
+- `/api/ivr/auto-route` - public press-1 auto-routing endpoint
 - `/api/exotel/status` - public Exotel status callback endpoint
 - `/api/setup` - setup endpoint protected by `SETUP_SECRET`
 
@@ -75,8 +76,28 @@ curl.exe http://localhost:3000/api/health
 
 1. Sign in to the dashboard.
 2. Confirm Phase 1 readiness checks.
-3. Add OTP routes in the Prepare OTP mapping form.
-4. Configure the Exotel app to call `/api/ivr/otp-lookup` when it has collected the OTP.
-5. Configure Exotel status callbacks to `/api/exotel/status`.
+3. Generate booking routes in the Prepare OTP mapping form. OTPs are generated automatically.
+4. Configure the Exotel app press-1 action to call `/api/ivr/auto-route?format=xml`.
+5. Configure the Exotel app OTP action to call `/api/ivr/otp-lookup?format=xml`.
+6. Configure Exotel status callbacks to `/api/exotel/status`.
 
 For real Exotel inbound/callback testing, `APP_BASE_URL` must be the deployed HTTPS URL, not localhost.
+
+Current configured production base URL:
+
+```text
+https://ivr-ten.vercel.app
+```
+
+Use these in Exotel:
+
+```text
+Press-1 auto route:
+https://ivr-ten.vercel.app/api/ivr/auto-route?format=xml
+
+OTP lookup:
+https://ivr-ten.vercel.app/api/ivr/otp-lookup?format=xml
+
+Status callback:
+https://ivr-ten.vercel.app/api/exotel/status
+```
