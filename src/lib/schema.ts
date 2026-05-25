@@ -122,7 +122,10 @@ async function initDatabaseOnce() {
     args: [env.DEFAULT_CAMPAIGN_NAME, env.DEFAULT_CAMPAIGN_DESCRIPTION, "active"],
   });
 
-  if (env.DEFAULT_PROVIDER_NAME && env.DEFAULT_PROVIDER_PHONE && env.DEFAULT_LOCATION_NAME) {
+  const providerCount = await turso.execute("SELECT COUNT(*) AS count FROM providers");
+  const hasProviders = Number(providerCount.rows[0]?.count ?? 0) > 0;
+
+  if (!hasProviders && env.DEFAULT_PROVIDER_NAME && env.DEFAULT_PROVIDER_PHONE && env.DEFAULT_LOCATION_NAME) {
     await turso.execute({
       sql: `INSERT INTO providers (name, phone, location_name, status)
             VALUES (?, ?, ?, 'active')

@@ -79,16 +79,12 @@ function textResponse(body: string, status = 200) {
 
 function connectResponse(number: string) {
   const env = getServerEnv();
-  const callerId = normalizeIndianPhoneForE164(
-    env.EXOTEL_CALLER_ID || env.EXOTEL_MASTER_NUMBER || env.EXOTEL_TRIAL_NUMBER,
-  );
 
   return NextResponse.json({
     fetch_after_attempt: false,
     destination: {
       numbers: [number],
     },
-    ...(callerId ? { outgoing_phone_number: callerId } : {}),
     record: env.EXOTEL_CALL_RECORDING_ENABLED,
     recording_channels: "dual",
     max_ringing_duration: 30,
