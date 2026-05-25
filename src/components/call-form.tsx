@@ -35,7 +35,9 @@ export function CallForm({
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => ({
+      error: "Call API returned an invalid response. Please try again.",
+    }));
 
     if (!response.ok) {
       setState({ status: "error", message: result.error ?? "Call failed." });
