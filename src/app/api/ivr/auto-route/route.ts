@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerEnv } from "@/lib/env";
+import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 import { selectProvider } from "@/lib/providers";
 import { initDatabase } from "@/lib/schema";
 
@@ -52,10 +52,13 @@ function xmlResponse(body: string) {
   });
 }
 
+function connectXml(number: string) {
+  return `<Connect><Number>${xmlEscape(number)}</Number></Connect>`;
+}
+
 async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
-  const env = getServerEnv();
   const payload = await parseRequest(request);
   const provider = await selectProvider();
 
@@ -79,11 +82,7 @@ async function handleAutoRoute(request: NextRequest) {
       return xmlResponse("<Response><Say>No provider is available right now. Please try again later.</Say><Hangup /></Response>");
     }
 
-    return xmlResponse(
-      `<Response><Say>Connecting you now.</Say><Dial callerId="${xmlEscape(env.EXOTEL_CALLER_ID)}" record="${
-        env.EXOTEL_CALL_RECORDING_ENABLED ? "true" : "false"
-      }">${xmlEscape(provider.phone)}</Dial></Response>`,
-    );
+    return xmlResponse(`<Response><Say>Connecting you now.</Say>${connectXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
   }
 
   return NextResponse.json({

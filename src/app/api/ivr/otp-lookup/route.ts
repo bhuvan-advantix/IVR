@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerEnv } from "@/lib/env";
 import { lookupOtpRoute, recordOtpLookup } from "@/lib/otp-routes";
+import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 
 export const runtime = "nodejs";
 
@@ -30,17 +30,13 @@ function xmlEscape(value: string) {
 }
 
 function routeXml(route: Awaited<ReturnType<typeof lookupOtpRoute>>) {
-  const env = getServerEnv();
-
   if (!route) {
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Invalid OTP. Please try again.</Say><Hangup /></Response>`;
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting you to ${xmlEscape(
     route.providerName,
-  )}.</Say><Dial callerId="${xmlEscape(env.EXOTEL_CALLER_ID)}" record="${
-    env.EXOTEL_CALL_RECORDING_ENABLED ? "true" : "false"
-  }">${xmlEscape(route.providerPhone)}</Dial></Response>`;
+  )}.</Say><Connect><Number>${xmlEscape(normalizeIndianPhoneForE164(route.providerPhone))}</Number></Connect></Response>`;
 }
 
 async function parseRequest(request: NextRequest) {
