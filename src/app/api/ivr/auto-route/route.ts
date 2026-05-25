@@ -52,8 +52,8 @@ function xmlResponse(body: string) {
   });
 }
 
-function connectXml(number: string) {
-  return `<Connect><Number>${xmlEscape(number)}</Number></Connect>`;
+function dialXml(number: string) {
+  return `<Dial>${xmlEscape(number)}</Dial>`;
 }
 
 async function handleAutoRoute(request: NextRequest) {
@@ -82,7 +82,7 @@ async function handleAutoRoute(request: NextRequest) {
       return xmlResponse("<Response><Say>No provider is available right now. Please try again later.</Say><Hangup /></Response>");
     }
 
-    return xmlResponse(`<Response><Say>Connecting you now.</Say>${connectXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
+    return xmlResponse(`<Response><Say>Connecting your call.</Say>${dialXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
   }
 
   return NextResponse.json({

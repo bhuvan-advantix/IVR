@@ -34,9 +34,9 @@ function routeXml(route: Awaited<ReturnType<typeof lookupOtpRoute>>) {
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Invalid OTP. Please try again.</Say><Hangup /></Response>`;
   }
 
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting you to ${xmlEscape(
-    route.providerName,
-  )}.</Say><Connect><Number>${xmlEscape(normalizeIndianPhoneForE164(route.providerPhone))}</Number></Connect></Response>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting your call.</Say><Dial>${xmlEscape(
+    normalizeIndianPhoneForE164(route.providerPhone),
+  )}</Dial></Response>`;
 }
 
 async function parseRequest(request: NextRequest) {
