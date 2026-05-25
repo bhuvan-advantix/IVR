@@ -18,7 +18,7 @@ function publicUrl(value: string) {
   return value.startsWith("https://");
 }
 
-export async function getPhaseReadiness(): Promise<PhaseReadiness> {
+export async function getPhaseReadiness(publicBaseUrl: string): Promise<PhaseReadiness> {
   await initDatabase();
 
   const env = getServerEnv();
@@ -65,9 +65,9 @@ export async function getPhaseReadiness(): Promise<PhaseReadiness> {
     },
     {
       label: "Public callback URL",
-      done: publicUrl(env.APP_BASE_URL),
-      detail: publicUrl(env.APP_BASE_URL)
-        ? `${env.APP_BASE_URL}/api/exotel/status`
+      done: publicUrl(publicBaseUrl),
+      detail: publicUrl(publicBaseUrl)
+        ? `${publicBaseUrl}/api/exotel/status`
         : "Use Vercel HTTPS URL before real Exotel callback testing",
     },
   ];

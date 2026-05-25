@@ -1,4 +1,5 @@
 import { Activity, AlertTriangle, CheckCircle2, Circle, Database, KeyRound, PhoneCall, Shuffle, Users } from "lucide-react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { CallForm } from "@/components/call-form";
 import { OtpRouteForm } from "@/components/otp-route-form";
@@ -19,6 +20,21 @@ const statusStyles: Record<string, string> = {
   queued: "bg-blue-50 text-blue-700 ring-blue-200",
   "in-progress": "bg-cyan-50 text-cyan-700 ring-cyan-200",
 };
+
+async function getPublicBaseUrl() {
+  const env = getServerEnv();
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const proto =
+    requestHeaders.get("x-forwarded-proto") ??
+    (host?.includes("localhost") || host?.includes("127.0.0.1") ? "http" : "https");
+
+  if (host) {
+    return `${proto}://${host}`.replace(/\/$/, "");
+  }
+
+  return env.APP_BASE_URL.replace(/\/$/, "");
+}
 
 function StatCard({
   label,
@@ -50,15 +66,16 @@ export default async function Home() {
   }
 
   const env = getServerEnv();
+  const publicBaseUrl = await getPublicBaseUrl();
   const [data, readiness, otpRoutes, providers] = await Promise.all([
     getDashboardData(),
-    getPhaseReadiness(),
+    getPhaseReadiness(publicBaseUrl),
     listOtpRoutes(6),
     listProviders(),
   ]);
-  const callbackUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/exotel/status`;
-  const otpLookupUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/ivr/otp-lookup`;
-  const autoRouteUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/api/ivr/auto-route?format=xml`;
+  const callbackUrl = `${publicBaseUrl}/api/exotel/status`;
+  const otpLookupUrl = `${publicBaseUrl}/api/ivr/otp-lookup`;
+  const autoRouteUrl = `${publicBaseUrl}/api/ivr/auto-route?format=xml`;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
