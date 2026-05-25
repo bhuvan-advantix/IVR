@@ -14,7 +14,8 @@ function normalizePayload(entries: Iterable<[string, string]>) {
 }
 
 function getOtp(payload: Record<string, string>) {
-  return payload.otp || payload.OTP || payload.Digits || payload.digits || payload.Input || payload.input || "";
+  const rawOtp = payload.otp || payload.OTP || payload.Digits || payload.digits || payload.Input || payload.input || "";
+  return rawOtp.replace(/\D/g, "");
 }
 
 function getCallSid(payload: Record<string, string>) {
