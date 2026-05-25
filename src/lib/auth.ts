@@ -67,12 +67,19 @@ export async function getRequestAdmin(request: NextRequest) {
 }
 
 export async function authenticateAdmin(email: string, password: string) {
-  await initDatabase();
+  const result = await db()
+    .execute({
+      sql: "SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1",
+      args: [email.toLowerCase()],
+    })
+    .catch(async () => {
+      await initDatabase();
+      return db().execute({
+        sql: "SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1",
+        args: [email.toLowerCase()],
+      });
+    });
 
-  const result = await db().execute({
-    sql: "SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1",
-    args: [email.toLowerCase()],
-  });
   const row = result.rows[0];
 
   if (!row) {

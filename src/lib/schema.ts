@@ -89,7 +89,22 @@ const migrations = [
   "ALTER TABLE otp_routes ADD COLUMN generated_by TEXT NOT NULL DEFAULT 'system'",
 ];
 
+let initPromise: Promise<void> | null = null;
+
 export async function initDatabase() {
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = initDatabaseOnce().catch((error) => {
+    initPromise = null;
+    throw error;
+  });
+
+  return initPromise;
+}
+
+async function initDatabaseOnce() {
   const turso = db();
   const env = getServerEnv();
 

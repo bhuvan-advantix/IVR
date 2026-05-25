@@ -74,7 +74,7 @@ export function LoginForm() {
         type="submit"
       >
         <LogIn className="size-4" />
-        Sign in
+        {state.status === "loading" ? "Signing in" : "Sign in"}
       </button>
 
       {state.status === "error" ? (
