@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getServerEnv } from "@/lib/env";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 import { selectProvider } from "@/lib/providers";
 import { initDatabase } from "@/lib/schema";
@@ -56,6 +57,45 @@ function dialXml(number: string) {
   return `<Dial>${xmlEscape(number)}</Dial>`;
 }
 
+function isExotelConnectRequest(payload: Record<string, string>) {
+  return Boolean(
+    payload.CallSid ||
+      payload.CallFrom ||
+      payload.CallTo ||
+      payload.DialCallStatus ||
+      payload.DialWhomNumber ||
+      payload.Direction,
+  );
+}
+
+function textResponse(body: string, status = 200) {
+  return new NextResponse(body, {
+    status,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+  });
+}
+
+function connectResponse(number: string) {
+  const env = getServerEnv();
+  const callerId = normalizeIndianPhoneForE164(
+    env.EXOTEL_CALLER_ID || env.EXOTEL_MASTER_NUMBER || env.EXOTEL_TRIAL_NUMBER,
+  );
+
+  return NextResponse.json({
+    fetch_after_attempt: false,
+    destination: {
+      numbers: [number],
+    },
+    ...(callerId ? { outgoing_phone_number: callerId } : {}),
+    record: env.EXOTEL_CALL_RECORDING_ENABLED,
+    recording_channels: "dual",
+    max_ringing_duration: 30,
+    max_conversation_duration: 3600,
+  });
+}
+
 async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
@@ -76,6 +116,8 @@ async function handleAutoRoute(request: NextRequest) {
   const wantsXml =
     request.nextUrl.searchParams.get("format") === "xml" ||
     (request.headers.get("accept") ?? "").includes("xml");
+  const wantsText = request.nextUrl.searchParams.get("format") === "text";
+  const wantsConnect = request.nextUrl.searchParams.get("format") === "connect" || isExotelConnectRequest(payload);
 
   if (wantsXml) {
     if (!provider) {
@@ -83,6 +125,15 @@ async function handleAutoRoute(request: NextRequest) {
     }
 
     return xmlResponse(`<Response>${dialXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
+  }
+
+  if (wantsText || wantsConnect) {
+    if (!provider) {
+      return textResponse("No active provider available.", 404);
+    }
+
+    const number = normalizeIndianPhoneForE164(provider.phone);
+    return wantsConnect ? connectResponse(number) : textResponse(number);
   }
 
   return NextResponse.json({

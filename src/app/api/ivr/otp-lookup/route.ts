@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerEnv } from "@/lib/env";
 import { lookupOtpRoute, recordOtpLookup } from "@/lib/otp-routes";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 
@@ -39,6 +40,34 @@ function routeXml(route: Awaited<ReturnType<typeof lookupOtpRoute>>) {
   )}</Dial></Response>`;
 }
 
+function textResponse(body: string, status = 200) {
+  return new NextResponse(body, {
+    status,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+  });
+}
+
+function connectResponse(number: string) {
+  const env = getServerEnv();
+  const callerId = normalizeIndianPhoneForE164(
+    env.EXOTEL_CALLER_ID || env.EXOTEL_MASTER_NUMBER || env.EXOTEL_TRIAL_NUMBER,
+  );
+
+  return NextResponse.json({
+    fetch_after_attempt: false,
+    destination: {
+      numbers: [number],
+    },
+    ...(callerId ? { outgoing_phone_number: callerId } : {}),
+    record: env.EXOTEL_CALL_RECORDING_ENABLED,
+    recording_channels: "dual",
+    max_ringing_duration: 30,
+    max_conversation_duration: 3600,
+  });
+}
+
 async function parseRequest(request: NextRequest) {
   if (request.method === "GET") {
     return normalizePayload(request.nextUrl.searchParams.entries());
@@ -71,6 +100,8 @@ async function handleLookup(request: NextRequest) {
   const wantsXml =
     request.nextUrl.searchParams.get("format") === "xml" ||
     (request.headers.get("accept") ?? "").includes("xml");
+  const wantsText = request.nextUrl.searchParams.get("format") === "text";
+  const wantsConnect = request.nextUrl.searchParams.get("format") === "connect";
 
   if (wantsXml) {
     return new NextResponse(routeXml(route), {
@@ -78,6 +109,15 @@ async function handleLookup(request: NextRequest) {
         "Content-Type": "application/xml; charset=utf-8",
       },
     });
+  }
+
+  if (wantsText || wantsConnect) {
+    if (!route) {
+      return textResponse("OTP route not found.", 404);
+    }
+
+    const number = normalizeIndianPhoneForE164(route.providerPhone);
+    return wantsConnect ? connectResponse(number) : textResponse(number);
   }
 
   return NextResponse.json({
