@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { lookupOtpRoute } from "@/lib/otp-routes";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 import { selectProvider } from "@/lib/providers";
 import { initDatabase } from "@/lib/schema";
@@ -16,6 +17,12 @@ function normalizePayload(entries: Iterable<[string, string]>) {
 
 function getCallSid(payload: Record<string, string>) {
   return payload.CallSid || payload.Sid || payload.call_sid || payload.sid || "";
+}
+
+function getOtp(payload: Record<string, string>) {
+  const rawOtp = payload.otp || payload.OTP || payload.Digits || payload.digits || payload.Input || payload.input || "";
+  const otp = rawOtp.replace(/\D/g, "");
+  return otp.length >= 4 ? otp : "";
 }
 
 function xmlEscape(value: string) {
@@ -93,7 +100,10 @@ async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
   const payload = await parseRequest(request);
-  const provider = await selectProvider();
+  const otp = getOtp(payload);
+  const otpRoute = otp ? await lookupOtpRoute(otp) : null;
+  const provider = otp ? null : await selectProvider();
+  const destinationPhone = otpRoute?.providerPhone ?? provider?.phone ?? "";
 
   await db().execute({
     sql: `INSERT INTO call_events (call_sid, event_type, status, payload)
@@ -101,8 +111,8 @@ async function handleAutoRoute(request: NextRequest) {
     args: [
       getCallSid(payload) || null,
       "auto-route",
-      provider ? "matched" : "no_provider",
-      JSON.stringify({ providerId: provider?.id ?? null, ...payload }),
+      destinationPhone ? (otp ? "matched_otp" : "matched") : otp ? "otp_not_found" : "no_provider",
+      JSON.stringify({ otp, otpRouteId: otpRoute?.id ?? null, providerId: provider?.id ?? null, ...payload }),
     ],
   });
 
@@ -113,26 +123,28 @@ async function handleAutoRoute(request: NextRequest) {
   const wantsConnect = request.nextUrl.searchParams.get("format") === "connect" || isExotelConnectRequest(payload);
 
   if (wantsXml) {
-    if (!provider) {
-      return xmlResponse("<Response><Say>No provider is available right now. Please try again later.</Say><Hangup /></Response>");
+    if (!destinationPhone) {
+      const message = otp ? "Invalid OTP. Please try again." : "No provider is available right now. Please try again later.";
+      return xmlResponse(`<Response><Say>${xmlEscape(message)}</Say><Hangup /></Response>`);
     }
 
-    return xmlResponse(`<Response>${dialXml(normalizeIndianPhoneForE164(provider.phone))}</Response>`);
+    return xmlResponse(`<Response>${dialXml(normalizeIndianPhoneForE164(destinationPhone))}</Response>`);
   }
 
   if (wantsText || wantsConnect) {
-    if (!provider) {
-      return textResponse("No active provider available.", 404);
+    if (!destinationPhone) {
+      return textResponse(otp ? "OTP route not found." : "No active provider available.", 404);
     }
 
-    const number = normalizeIndianPhoneForE164(provider.phone);
+    const number = normalizeIndianPhoneForE164(destinationPhone);
     return wantsConnect ? connectResponse(number) : textResponse(number);
   }
 
   return NextResponse.json({
-    ok: Boolean(provider),
+    ok: Boolean(destinationPhone),
+    route: otpRoute,
     provider,
-    error: provider ? undefined : "No active provider available.",
+    error: destinationPhone ? undefined : otp ? "OTP route not found." : "No active provider available.",
   });
 }
 
