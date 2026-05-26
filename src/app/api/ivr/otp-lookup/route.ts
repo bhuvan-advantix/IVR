@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exotelConnectResponse } from "@/lib/exotel-connect";
 import { lookupOtpRoute, recordOtpLookup } from "@/lib/otp-routes";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 
@@ -46,19 +47,6 @@ function textResponse(body: string, status = 200) {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
     },
-  });
-}
-
-function connectResponse(number: string) {
-  return NextResponse.json({
-    fetch_after_attempt: false,
-    destination: {
-      numbers: [number],
-    },
-    record: true,
-    recording_channels: "dual",
-    max_ringing_duration: 45,
-    max_conversation_duration: 3600,
   });
 }
 
@@ -111,7 +99,7 @@ async function handleLookup(request: NextRequest) {
     }
 
     const number = normalizeIndianPhoneForE164(route.providerPhone);
-    return wantsConnect ? connectResponse(number) : textResponse(number);
+    return wantsConnect ? NextResponse.json(exotelConnectResponse(number, payload)) : textResponse(number);
   }
 
   return NextResponse.json({

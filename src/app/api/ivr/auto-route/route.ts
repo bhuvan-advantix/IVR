@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { exotelConnectResponse } from "@/lib/exotel-connect";
 import { lookupOtpRoute } from "@/lib/otp-routes";
 import { normalizeIndianPhoneForE164 } from "@/lib/phone";
 import { selectProvider } from "@/lib/providers";
@@ -83,19 +84,6 @@ function textResponse(body: string, status = 200) {
   });
 }
 
-function connectResponse(number: string) {
-  return NextResponse.json({
-    fetch_after_attempt: false,
-    destination: {
-      numbers: [number],
-    },
-    record: true,
-    recording_channels: "dual",
-    max_ringing_duration: 45,
-    max_conversation_duration: 3600,
-  });
-}
-
 async function handleAutoRoute(request: NextRequest) {
   await initDatabase();
 
@@ -137,7 +125,7 @@ async function handleAutoRoute(request: NextRequest) {
     }
 
     const number = normalizeIndianPhoneForE164(destinationPhone);
-    return wantsConnect ? connectResponse(number) : textResponse(number);
+    return wantsConnect ? NextResponse.json(exotelConnectResponse(number, payload)) : textResponse(number);
   }
 
   return NextResponse.json({
